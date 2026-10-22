@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>拼多多極簡換算器</title>
+    
+    <!-- PWA & Apple iOS 專屬設定 -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="拼多多換算">
+    <link rel="apple-touch-icon" href="icon.png">
+
+    <style>
+        :root {
+            --tiffany: #0ABAB5;
+            --tiffany-dark: #088F8C;
+            --bg-color: #F5F7FA;
+            --card-bg: #FFFFFF;
+            --text-main: #333333;
+            --text-light: #888888;
+            --border-color: #EEEEEE;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 480px;
+            background: var(--card-bg);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        header {
+            padding: 20px;
+            text-align: center;
+            color: var(--tiffany-dark);
+            font-size: 22px;
+            font-weight: bold;
+        }
+
+        /* 模式切換 Tabs */
+        .tabs {
+            display: flex;
+            background: #F0F0F0;
+            border-radius: 20px;
+            margin: 0 20px 20px;
+            padding: 4px;
+        }
+
+        .tab {
+            flex: 1;
+            text-align: center;
+            padding: 10px 5px;
+            font-size: 14px;
+            color: var(--text-light);
+            border-radius: 16px;
+            cursor: pointer;
+            transition: 0.3s;
+            font-weight: 500;
+        }
+
+        .tab.active {
+            background: var(--card-bg);
+            color: var(--tiffany-dark);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .input-group {
+            padding: 0 20px 15px;
+        }
+
+        .label-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .input-group label {
+            font-size: 13px;
+            color: var(--text-light);
+            display: block;
+        }
+
+        .sync-btn {
+            background: rgba(10, 186, 181, 0.1);
+            color: var(--tiffany-dark);
+            border: none;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-weight: bold;
+        }
+
+        select {
+            width: 100%;
+            padding: 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            font-size: 16px;
+            appearance: none;
+            background: #FAFAFA url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e") no-repeat right 15px center;
+            background-size: 16px;
+            outline: none;
+        }
+
+        /* 觸控微調輸入框 */
+        .stepper-control {
+            display: flex;
+            align-items: center;
+            background: #FAFAFA;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+            height: 56px;
+        }
+
+        .stepper-btn {
+            width: 56px;
+            height: 100%;
+            background: #EEEEEE;
+            border: none;
+            font-size: 24px;
+            color: #555;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: manipulation;
+            user-select: none;
+        }
+
+        .stepper-btn:active {
+            background: #DDDDDD;
+        }
+
+        .stepper-input-wrapper {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #FFFFFF;
+            height: 100%;
+        }
+
+        .currency-symbol {
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--tiffany-dark);
+            margin-right: 4px;
+        }
+
+        .stepper-control input {
+            width: 60%;
+            border: none;
+            text-align: center;
+            font-size: 22px;
+            font-weight: bold;
+            color: var(--tiffany-dark);
+            background: transparent;
+            outline: none;
+        }
+
+        /* 雙欄排版 (數量與匯率) */
+        .row-2 {
+            display: flex;
+            gap: 15px;
+            padding: 0 20px 5px;
+            align-items: flex-start;
+        }
+
+        .col {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stepper-control.small {
+            height: 50px;
+        }
+        .stepper-control.small .stepper-btn {
+            width: 44px;
+            font-size: 20px;
+        }
+        .stepper-control.small input {
+            font-size: 18px;
+            color: var(--text-main);
+        }
+
+        .hint-text {
+            text-align: right;
+            font-size: 11px;
+            color: #AAAAAA;
+            padding: 4px 20px 10px;
+            min-height: 20px;
+        }
+
+        /* 底部結果卡片 */
+        .result-card {
+            background: linear-gradient(135deg, var(--tiffany), var(--tiffany-dark));
+            margin: auto 20px 20px;
+            border-radius: 24px;
+            padding: 30px 20px;
+            color: white;
+            text-align: center;
+            box-shadow: 0 10px 20px rgba(10, 186, 181, 0.3);
+        }
+
+        .result-item {
+            margin-bottom: 20px;
+        }
+
+        .result-item:last-child {
+            margin-bottom: 0;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .result-label {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+
+        .result-value {
+            font-size: 48px;
+            font-weight: bold;
+            line-height: 1;
+        }
+
+        .result-value small {
+            font-size: 24px;
+            margin-right: 2px;
+        }
+
+        .result-item:last-child .result-value {
+            font-size: 28px;
+        }
+        .result-item:last-child .result-value small {
+            font-size: 18px;
+        }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>拼多多極簡換算器</header>
+
+    <div class="tabs">
+        <div class="tab active" onclick="setMode('forward')" id="tab-forward">人民幣 ➔ 台幣</div>
+        <div class="tab" onclick="setMode('reverse')" id="tab-reverse">台幣 ➔ 人民幣</div>
+        <div class="tab" onclick="setMode('pure')" id="tab-pure">純台幣分攤</div>
+    </div>
+
+    <div class="input-group" id="payment-group">
+        <div class="label-row"><label>付款方式</label></div>
+        <select id="payment" onchange="calculate()">
+            <option value="jiekou">街口支付 (免海外手續費)</option>
+            <option value="credit">國際信用卡 (3% + 1.5%)</option>
+            <option value="apple">Apple Pay (低消 ¥2 + 1.5%)</option>
+            <option value="alipay">支付寶/微信 (¥200免3% + 1.5%)</option>
+        </select>
+    </div>
+
+    <div class="input-group">
+        <div class="label-row"><label id="amount-label">總人民幣實付 (¥)</label></div>
+        <div class="stepper-control">
+            <button class="stepper-btn" onclick="stepValue('amount', -1)">−</button>
+            <div class="stepper-input-wrapper">
+                <span class="currency-symbol" id="amount-symbol">¥</span>
+                <input type="number" id="amount" inputmode="decimal" value="0" oninput="calculate()">
+            </div>
+            <button class="stepper-btn" onclick="stepValue('amount', 1)">+</button>
+        </div>
+    </div>
+
+    <div class="row-2" id="qty-rate-row">
+        <div class="col">
+            <div class="label-row"><label>總數量</label></div>
+            <div class="stepper-control small">
+                <button class="stepper-btn" onclick="stepValue('qty', -1)">−</button>
+                <div class="stepper-input-wrapper">
+                    <input type="number" id="qty" inputmode="numeric" value="1" oninput="calculate()">
+                </div>
+                <button class="stepper-btn" onclick="stepValue('qty', 1)">+</button>
+            </div>
+        </div>
+        <div class="col" id="rate-col">
+            <div class="label-row">
+                <label>基準匯率</label>
+                <button class="sync-btn" onclick="fetchRate()">🔄 手動同步</button>
+            </div>
+            <div class="stepper-control small">
+                <button class="stepper-btn" onclick="stepValue('rate', -0.01)">−</button>
+                <div class="stepper-input-wrapper">
+                    <input type="number" id="rate" inputmode="decimal" value="4.55" step="0.01" oninput="calculate()">
+                </div>
+                <button class="stepper-btn" onclick="stepValue('rate', 0.01)">+</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="hint-text" id="sync-status">尚未同步</div>
+
+    <div class="result-card">
+        <div class="result-item">
+            <div class="result-label" id="result-total-label">整組總實付</div>
+            <div class="result-value"><small id="result-total-symbol">NT$</small><span id="res-total">0</span></div>
+        </div>
+        <div class="result-item">
+            <div class="result-label">單件平均單價</div>
+            <div class="result-value"><small id="result-avg-symbol">NT$</small><span id="res-avg">0</span></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentMode = 'forward';
+
+    function setMode(mode) {
+        currentMode = mode;
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.getElementById(`tab-${mode}`).classList.add('active');
+
+        const isPure = (mode === 'pure');
+        document.getElementById('payment-group').classList.toggle('hidden', isPure);
+        document.getElementById('rate-col').style.visibility = isPure ? 'hidden' : 'visible';
+        document.getElementById('sync-status').style.visibility = isPure ? 'hidden' : 'visible';
+
+        if (mode === 'forward') {
+            document.getElementById('amount-label').innerText = '總人民幣實付 (¥)';
+            document.getElementById('amount-symbol').innerText = '¥';
+            document.getElementById('result-total-label').innerText = '整組總實付台幣';
+            document.getElementById('result-total-symbol').innerText = 'NT$';
+            document.getElementById('result-avg-symbol').innerText = 'NT$';
+        } else if (mode === 'reverse') {
+            document.getElementById('amount-label').innerText = '總台幣金額 (NT$)';
+            document.getElementById('amount-symbol').innerText = 'NT$';
+            document.getElementById('result-total-label').innerText = '反推總人民幣';
+            document.getElementById('result-total-symbol').innerText = '¥';
+            document.getElementById('result-avg-symbol').innerText = '¥';
+        } else {
+            document.getElementById('amount-label').innerText = '總台幣金額 (NT$)';
+            document.getElementById('amount-symbol').innerText = 'NT$';
+            document.getElementById('result-total-label').innerText = '整組總實付台幣';
+            document.getElementById('result-total-symbol').innerText = 'NT$';
+            document.getElementById('result-avg-symbol').innerText = 'NT$';
+        }
+        
+        calculate();
+    }
+
+    function stepValue(id, step) {
+        const input = document.getElementById(id);
+        let val = parseFloat(input.value) || 0;
+        val += step;
+        if (id === 'qty' && val < 1) val = 1;
+        if (val < 0) val = 0;
+        
+        input.value = id === 'rate' ? val.toFixed(3) : parseFloat(val.toFixed(2));
+        calculate();
+    }
+
+    function calculate() {
+        const amount = parseFloat(document.getElementById('amount').value) || 0;
+        const qty = parseInt(document.getElementById('qty').value) || 1;
+        const rate = parseFloat(document.getElementById('rate').value) || 4.55;
+        const payMethod = document.getElementById('payment').value;
+
+        let totalResult = 0;
+
+        if (amount === 0) {
+            updateUI(0, 0);
+            return;
+        }
+
+        if (currentMode === 'pure') {
+            totalResult = amount;
+        } 
+        else if (currentMode === 'forward') {
+            let feeRmb = 0;
+            let bankFeeRate = 0;
+
+            if (payMethod === 'jiekou') {
+                feeRmb = amount * 0.01; 
+            } else if (payMethod === 'credit') {
+                feeRmb = amount * 0.03;
+                bankFeeRate = 0.015;
+            } else if (payMethod === 'apple') {
+                feeRmb = Math.max(amount * 0.03, 2.0);
+                bankFeeRate = 0.015;
+            } else if (payMethod === 'alipay') {
+                feeRmb = amount <= 200 ? 0 : amount * 0.03;
+                bankFeeRate = 0.015;
+            }
+
+            const totalRmb = amount + feeRmb;
+            const baseTwd = totalRmb * rate;
+            totalResult = baseTwd * (1 + bankFeeRate);
+        } 
+        else if (currentMode === 'reverse') {
+            const baseTwd = amount;
+            
+            if (payMethod === 'jiekou') {
+                totalResult = baseTwd / (rate * 1.01);
+            } else if (payMethod === 'credit') {
+                totalResult = baseTwd / (rate * 1.015 * 1.03);
+            } else if (payMethod === 'apple') {
+                let checkBase = baseTwd / (rate * 1.015);
+                if ((checkBase - 2.0) < 66.67) {
+                    totalResult = Math.max(0, checkBase - 2.0);
+                } else {
+                    totalResult = baseTwd / (rate * 1.015 * 1.03);
+                }
+            } else if (payMethod === 'alipay') {
+                let rmbWithoutFee = baseTwd / (rate * 1.015);
+                if (rmbWithoutFee <= 200) {
+                    totalResult = rmbWithoutFee;
+                } else {
+                    totalResult = baseTwd / (rate * 1.015 * 1.03);
+                }
+            }
+        }
+
+        const avgResult = qty > 0 ? (totalResult / qty) : 0;
+        updateUI(totalResult, avgResult);
+    }
+
+    function updateUI(total, avg) {
+        document.getElementById('res-total').innerText = Math.round(total).toLocaleString();
+        document.getElementById('res-avg').innerText = avg.toFixed(2);
+    }
+
+    async function fetchRate() {
+        const statusEl = document.getElementById('sync-status');
+        statusEl.innerText = "同步中...";
+        try {
+            const res = await fetch('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/cny.json');
+            const data = await res.json();
+            if (data && data.cny && data.cny.twd) {
+                document.getElementById('rate').value = data.cny.twd.toFixed(3);
+                
+                const now = new Date();
+                const timeStr = `${now.getMonth()+1}/${now.getDate()} ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
+                statusEl.innerText = `來源: jsdelivr/currency-api | 時間: ${timeStr}`;
+                calculate();
+            } else {
+                statusEl.innerText = "格式解析失敗，請稍後再試";
+            }
+        } catch (error) {
+            statusEl.innerText = "同步失敗，使用預設匯率";
+        }
+    }
+
+    window.onload = () => {
+        fetchRate();
+    };
+
+    // 註冊 Service Worker (PWA 必備)
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js').catch(err => {
+                console.log('SW Registration failed: ', err);
+            });
+        });
+    }
+</script>
+
+</body>
+</html>
