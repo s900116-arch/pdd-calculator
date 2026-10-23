@@ -330,7 +330,7 @@
 
     <div class="result-card">
         <div class="result-item">
-            <div class="result-label" id="result-total-label">整組總實付</div>
+            <div class="result-label" id="result-total-label">整組總實付台幣</div>
             <div class="result-value"><small id="result-total-symbol">NT$</small><span id="res-total">0</span></div>
         </div>
         <div class="result-item">
@@ -348,8 +348,11 @@
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         document.getElementById(`tab-${mode}`).classList.add('active');
 
+        // 當模式是「純台幣」或「台幣反推人民幣」時，隱藏付款方式
+        const hidePayment = (mode === 'pure' || mode === 'reverse');
+        document.getElementById('payment-group').classList.toggle('hidden', hidePayment);
+
         const isPure = (mode === 'pure');
-        document.getElementById('payment-group').classList.toggle('hidden', isPure);
         document.getElementById('rate-col').style.visibility = isPure ? 'hidden' : 'visible';
         document.getElementById('sync-status').style.visibility = isPure ? 'hidden' : 'visible';
 
@@ -425,27 +428,9 @@
             totalResult = baseTwd * (1 + bankFeeRate);
         } 
         else if (currentMode === 'reverse') {
+            // 反推模式：不計算任何手續費，單純除以匯率
             const baseTwd = amount;
-            
-            if (payMethod === 'jiekou') {
-                totalResult = baseTwd / (rate * 1.01);
-            } else if (payMethod === 'credit') {
-                totalResult = baseTwd / (rate * 1.015 * 1.03);
-            } else if (payMethod === 'apple') {
-                let checkBase = baseTwd / (rate * 1.015);
-                if ((checkBase - 2.0) < 66.67) {
-                    totalResult = Math.max(0, checkBase - 2.0);
-                } else {
-                    totalResult = baseTwd / (rate * 1.015 * 1.03);
-                }
-            } else if (payMethod === 'alipay') {
-                let rmbWithoutFee = baseTwd / (rate * 1.015);
-                if (rmbWithoutFee <= 200) {
-                    totalResult = rmbWithoutFee;
-                } else {
-                    totalResult = baseTwd / (rate * 1.015 * 1.03);
-                }
-            }
+            totalResult = rate > 0 ? (baseTwd / rate) : 0;
         }
 
         const avgResult = qty > 0 ? (totalResult / qty) : 0;
