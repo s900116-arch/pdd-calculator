@@ -128,7 +128,6 @@
             outline: none;
         }
 
-        /* 觸控微調輸入框 */
         .stepper-control {
             display: flex;
             align-items: center;
@@ -185,7 +184,6 @@
             outline: none;
         }
 
-        /* 雙欄排版 (數量與匯率) */
         .row-2 {
             display: flex;
             gap: 15px;
@@ -199,17 +197,9 @@
             flex-direction: column;
         }
 
-        .stepper-control.small {
-            height: 50px;
-        }
-        .stepper-control.small .stepper-btn {
-            width: 44px;
-            font-size: 20px;
-        }
-        .stepper-control.small input {
-            font-size: 18px;
-            color: var(--text-main);
-        }
+        .stepper-control.small { height: 50px; }
+        .stepper-control.small .stepper-btn { width: 44px; font-size: 20px; }
+        .stepper-control.small input { font-size: 18px; color: var(--text-main); }
 
         .hint-text {
             text-align: right;
@@ -219,7 +209,6 @@
             min-height: 20px;
         }
 
-        /* 底部結果卡片 */
         .result-card {
             background: linear-gradient(135deg, var(--tiffany), var(--tiffany-dark));
             margin: auto 20px 20px;
@@ -230,39 +219,17 @@
             box-shadow: 0 10px 20px rgba(10, 186, 181, 0.3);
         }
 
-        .result-item {
-            margin-bottom: 20px;
-        }
-
+        .result-item { margin-bottom: 20px; }
         .result-item:last-child {
             margin-bottom: 0;
             padding-top: 20px;
             border-top: 1px solid rgba(255,255,255,0.3);
         }
-
-        .result-label {
-            font-size: 14px;
-            opacity: 0.9;
-            margin-bottom: 5px;
-        }
-
-        .result-value {
-            font-size: 48px;
-            font-weight: bold;
-            line-height: 1;
-        }
-
-        .result-value small {
-            font-size: 24px;
-            margin-right: 2px;
-        }
-
-        .result-item:last-child .result-value {
-            font-size: 28px;
-        }
-        .result-item:last-child .result-value small {
-            font-size: 18px;
-        }
+        .result-label { font-size: 14px; opacity: 0.9; margin-bottom: 5px; }
+        .result-value { font-size: 48px; font-weight: bold; line-height: 1; }
+        .result-value small { font-size: 24px; margin-right: 2px; }
+        .result-item:last-child .result-value { font-size: 28px; }
+        .result-item:last-child .result-value small { font-size: 18px; }
 
         .hidden { display: none !important; }
     </style>
@@ -348,7 +315,6 @@
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         document.getElementById(`tab-${mode}`).classList.add('active');
 
-        // 當模式是「純台幣」或「台幣反推人民幣」時，隱藏付款方式
         const hidePayment = (mode === 'pure' || mode === 'reverse');
         document.getElementById('payment-group').classList.toggle('hidden', hidePayment);
 
@@ -428,7 +394,6 @@
             totalResult = baseTwd * (1 + bankFeeRate);
         } 
         else if (currentMode === 'reverse') {
-            // 反推模式：不計算任何手續費，單純除以匯率
             const baseTwd = amount;
             totalResult = rate > 0 ? (baseTwd / rate) : 0;
         }
@@ -445,34 +410,48 @@
     async function fetchRate() {
         const statusEl = document.getElementById('sync-status');
         statusEl.innerText = "同步中...";
-        try {
-            const res = await fetch('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/cny.json');
-            const data = await res.json();
-            if (data && data.cny && data.cny.twd) {
-                document.getElementById('rate').value = data.cny.twd.toFixed(3);
+        
+        // 多重 API 備援清單
+        const apiEndpoints = [
+            'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/cny.json',
+            'https://latest.currency-api.pages.dev/v1/currencies/cny.json'
+        ];
+        
+        for (let url of apiEndpoints) {
+            try {
+                // 加上時間戳，防止被中間節點快取舊資料
+                const fetchUrl = url + '?t=' + new Date().getTime();
+                const res = await fetch(fetchUrl);
+                if (!res.ok) continue;
                 
-                const now = new Date();
-                const timeStr = `${now.getMonth()+1}/${now.getDate()} ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
-                statusEl.innerText = `來源: jsdelivr/currency-api | 時間: ${timeStr}`;
-                calculate();
-            } else {
-                statusEl.innerText = "格式解析失敗，請稍後再試";
+                const data = await res.json();
+                if (data && data.cny && data.cny.twd) {
+                    document.getElementById('rate').value = data.cny.twd.toFixed(3);
+                    
+                    const now = new Date();
+                    const timeStr = `${now.getMonth()+1}/${now.getDate()} ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
+                    const sourceName = url.includes('jsdelivr') ? 'jsd' : 'pages';
+                    statusEl.innerText = `來源: ${sourceName} | 時間: ${timeStr}`;
+                    
+                    calculate();
+                    return; // 只要有一個成功就跳出
+                }
+            } catch (error) {
+                console.log(`Fetch failed for ${url}`);
             }
-        } catch (error) {
-            statusEl.innerText = "同步失敗，使用預設匯率";
         }
+        
+        // 如果兩個備援都失敗才顯示錯誤
+        statusEl.innerText = "同步失敗，使用預設匯率";
     }
 
     window.onload = () => {
         fetchRate();
     };
 
-    // 註冊 Service Worker (PWA 必備)
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-            navigator.serviceWorker.register('./sw.js').catch(err => {
-                console.log('SW Registration failed: ', err);
-            });
+            navigator.serviceWorker.register('./sw.js');
         });
     }
 </script>
